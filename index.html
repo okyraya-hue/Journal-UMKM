@@ -3,29 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pembukuan UMKM</title>
+<title>Pembukuan UMKM Premium</title>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background: #eef2f7;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #74ebd5, #ACB6E5);
   margin: 0;
-  padding: 10px;
 }
 
 .container {
-  max-width: 500px;
+  max-width: 520px;
   margin: auto;
+  padding: 12px;
+}
+
+.card {
   background: white;
   padding: 15px;
-  border-radius: 15px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+/* HEADER */
+.logo-group {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.logo-group img {
+  width: 45px;
 }
 
 h2 {
   text-align: center;
+  margin: 8px 0;
 }
 
+/* FORM */
 input, select, button {
   width: 100%;
   padding: 10px;
@@ -36,40 +51,64 @@ input, select, button {
 }
 
 button {
-  background: #4CAF50;
+  background: #2ecc71;
   color: white;
+  font-weight: bold;
   border: none;
 }
 
+/* TABLE FIX RAPI */
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
-  font-size: 12px;
+  table-layout: fixed; /* 🔥 penting biar sejajar */
 }
 
 th, td {
   padding: 6px;
+  font-size: 12px;
   text-align: center;
   border-bottom: 1px solid #ddd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* KUNCI LEBAR KOLOM */
+th:nth-child(1), td:nth-child(1) { width: 70px; }
+th:nth-child(2), td:nth-child(2) { width: 90px; }
+th:nth-child(3), td:nth-child(3) { width: 60px; }
+th:nth-child(4), td:nth-child(4) { width: 40px; }
+th:nth-child(5), td:nth-child(5) { width: 70px; }
+th:nth-child(6), td:nth-child(6) { width: 50px; }
+
 th {
-  background: #4CAF50;
+  background: #2ecc71;
   color: white;
+}
+
+.masuk { color: green; font-weight: bold; }
+.keluar { color: red; font-weight: bold; }
+
+.hapus-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 4px;
+  border-radius: 6px;
 }
 
 .total {
   margin-top: 10px;
-  font-weight: bold;
   text-align: right;
+  font-weight: bold;
 }
 
 footer {
   text-align: center;
-  font-size: 12px;
-  margin-top: 15px;
-  color: gray;
+  font-size: 11px;
+  margin-top: 10px;
 }
 </style>
 </head>
@@ -78,81 +117,102 @@ footer {
 
 <div class="container">
 <div class="card">
-  <div class="header">
-  <img src="logo.png">
-  <h2>Pembukuan UMKM</h2>
+
+<div class="logo-group">
+  <img src="logo1.png">
+  <img src="logo2.png">
 </div>
-  <h2>Pembukuan UMKM</h2>
 
-  <input type="date" id="tanggal">
-  <input type="text" id="keterangan" placeholder="Keterangan">
+<h2>Pembukuan UMKM</h2>
 
-  <select id="jenis">
-    <option value="Masuk">Uang Masuk</option>
-    <option value="Keluar">Uang Keluar</option>
-  </select>
+<input type="date" id="tanggal">
+<input type="text" id="keterangan" placeholder="Keterangan">
+<select id="jenis">
+  <option value="Masuk">Masuk</option>
+  <option value="Keluar">Keluar</option>
+</select>
+<input type="number" id="qty" placeholder="Qty">
+<input type="number" id="harga" placeholder="Harga">
 
-  <input type="number" id="qty" placeholder="Qty">
-  <input type="number" id="harga" placeholder="Harga">
+<button onclick="tambahData()">Tambah</button>
 
-  <button onclick="tambahData()">Tambah</button>
+<table id="tabel">
+<thead>
+<tr>
+<th>Tgl</th>
+<th>Ket</th>
+<th>Jenis</th>
+<th>Qty</th>
+<th>Total</th>
+<th>X</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 
-  <table id="tabel">
-    <thead>
-      <tr>
-        <th>Tgl</th>
-        <th>Ket</th>
-        <th>Jenis</th>
-        <th>Qty</th>
-        <th>Total</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<div class="total" id="saldo">Saldo: 0</div>
 
-  <div class="total" id="totalSaldo">Saldo: 0</div>
+<footer>Pembukuan UMKM Oktavian Alyandra .Skom</footer>
 
-  <footer>
-    Pembukuan UMKM Oktavian Alyandra .Skom
-  </footer>
+</div>
 </div>
 
 <script>
-let saldo = 0;
+let data = JSON.parse(localStorage.getItem("dataUMKM")) || [];
+
+function render() {
+  let tbody = document.querySelector("#tabel tbody");
+  tbody.innerHTML = "";
+  let saldo = 0;
+
+  data.forEach((d, i) => {
+    let total = d.qty * d.harga;
+    saldo += d.jenis === "Masuk" ? total : -total;
+
+    let row = `
+    <tr>
+      <td>${d.tgl}</td>
+      <td>${d.ket}</td>
+      <td class="${d.jenis=='Masuk'?'masuk':'keluar'}">${d.jenis}</td>
+      <td>${d.qty}</td>
+      <td>${total}</td>
+      <td><button class="hapus-btn" onclick="hapus(${i})">X</button></td>
+    </tr>`;
+    tbody.innerHTML += row;
+  });
+
+  document.getElementById("saldo").innerText = "Saldo: " + saldo;
+}
 
 function tambahData() {
-  let tgl = document.getElementById("tanggal").value;
-  let ket = document.getElementById("keterangan").value;
-  let jenis = document.getElementById("jenis").value;
-  let qty = parseInt(document.getElementById("qty").value) || 0;
-  let harga = parseInt(document.getElementById("harga").value) || 0;
+  let tgl = tanggal.value;
+  let ket = keterangan.value;
+  let jenis = jenis.value;
+  let qty = parseInt(qty.value);
+  let harga = parseInt(harga.value);
 
-  let total = qty * harga;
-
-  if (jenis === "Masuk") {
-    saldo += total;
-  } else {
-    saldo -= total;
+  if (!tgl || !ket || !qty || !harga) {
+    alert("Isi semua data!");
+    return;
   }
 
-  let table = document.getElementById("tabel").getElementsByTagName('tbody')[0];
-  let row = table.insertRow();
+  data.push({ tgl, ket, jenis, qty, harga });
+  localStorage.setItem("dataUMKM", JSON.stringify(data));
 
-  row.innerHTML = `
-    <td>${tgl}</td>
-    <td>${ket}</td>
-    <td>${jenis}</td>
-    <td>${qty}</td>
-    <td>${total}</td>
-  `;
+  render();
 
-  document.getElementById("totalSaldo").innerText = "Saldo: " + saldo;
-
-  // reset input
-  document.getElementById("keterangan").value = "";
-  document.getElementById("qty").value = "";
-  document.getElementById("harga").value = "";
+  keterangan.value = "";
+  qty.value = "";
+  harga.value = "";
 }
+
+function hapus(i) {
+  data.splice(i, 1);
+  localStorage.setItem("dataUMKM", JSON.stringify(data));
+  render();
+}
+
+render();
 </script>
 
 </body>
